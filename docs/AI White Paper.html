@@ -99,13 +99,7 @@
                     <li>Adopt a phased implementation approach, prioritizing pilot projects that offer quick wins and valuable learning experiences.</li>
                 </ul>
             </div>
-            <button id="generateTakeawaysButton" class="gemini-button mt-4">
-                <i class="fas fa-lightbulb mr-2"></i>✨ Generate Key Takeaways
-            </button>
-            <div id="geminiTakeawaysOutput" class="gemini-takeaways-container hidden">
-                <h4>AI-Generated Key Takeaways:</h4>
-                <div id="takeawaysContent"></div>
-            </div>
+
         </section>
 
         <section id="section-i" class="content-section">
@@ -783,78 +777,6 @@
                     }
                 });
                 if(current === '' && navLinks.length > 0) navLinks[0].classList.add('active'); // Default to first if none found
-            }
-
-            // Gemini API Integration for Executive Summary Takeaways
-            const generateTakeawaysButton = document.getElementById('generateTakeawaysButton');
-            const takeawaysOutputContainer = document.getElementById('geminiTakeawaysOutput');
-            const takeawaysContentDiv = document.getElementById('takeawaysContent');
-
-            if (generateTakeawaysButton) {
-                generateTakeawaysButton.addEventListener('click', async () => {
-                    const executiveSummaryTextElement = document.getElementById('executiveSummaryText');
-                    if (!executiveSummaryTextElement) {
-                        takeawaysContentDiv.innerHTML = '<p class="text-red-500">Error: Could not find executive summary text.</p>';
-                        takeawaysOutputContainer.classList.remove('hidden');
-                        return;
-                    }
-                    const summaryText = executiveSummaryTextElement.innerText;
-                    
-                    takeawaysContentDiv.innerHTML = '<div class="loading-spinner"></div> <p class="text-center text-gray-500">Generating takeaways...</p>';
-                    takeawaysOutputContainer.classList.remove('hidden');
-                    generateTakeawaysButton.disabled = true;
-                    generateTakeawaysButton.classList.add('opacity-50', 'cursor-not-allowed');
-
-
-                    const prompt = `Please summarize the following executive summary for a university AI deployment report into 3-5 concise key takeaways, formatted as a bulleted list. Each takeaway should be a complete sentence and capture a main strategic point:\n\n${summaryText}`;
-                    let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                    const payload = { contents: chatHistory };
-                    const apiKey = ""; 
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-                    try {
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) {
-                            const errorResult = await response.json();
-                            console.error('API Error:', errorResult);
-                            throw new Error(`API request failed with status ${response.status}: ${errorResult?.error?.message || response.statusText}`);
-                        }
-
-                        const result = await response.json();
-
-                        if (result.candidates && result.candidates.length > 0 &&
-                            result.candidates[0].content && result.candidates[0].content.parts &&
-                            result.candidates[0].content.parts.length > 0) {
-                            let generatedText = result.candidates[0].content.parts[0].text;
-                            
-                            const takeawaysArray = generatedText.split('\n').map(item => item.trim()).filter(item => item.startsWith('* ') || item.startsWith('- ') || item.match(/^\d+\.\s/));
-                            if (takeawaysArray.length > 0) {
-                                let htmlList = '<ul>';
-                                takeawaysArray.forEach(item => {
-                                    htmlList += `<li>${item.replace(/^(\-|\*|\d+\.)\s*/, '')}</li>`;
-                                });
-                                htmlList += '</ul>';
-                                takeawaysContentDiv.innerHTML = htmlList;
-                            } else {
-                                takeawaysContentDiv.innerHTML = generatedText.split('\n').map(p => `<p>${p}</p>`).join('');
-                            }
-                        } else {
-                            console.error('Unexpected API response structure:', result);
-                            takeawaysContentDiv.innerHTML = '<p class="text-red-500">Could not generate takeaways. The AI response was not in the expected format.</p>';
-                        }
-                    } catch (error) {
-                        console.error('Error calling Gemini API:', error);
-                        takeawaysContentDiv.innerHTML = `<p class="text-red-500">An error occurred while generating takeaways: ${error.message}. Please check the console for more details.</p>`;
-                    } finally {
-                        generateTakeawaysButton.disabled = false;
-                        generateTakeawaysButton.classList.remove('opacity-50', 'cursor-not-allowed');
-                    }
-                });
             }
         });
     </script>
