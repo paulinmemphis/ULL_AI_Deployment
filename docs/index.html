@@ -73,6 +73,7 @@
                 <a href="#section-iv" class="nav-link">IV. Measuring Success</a>
                 <a href="#section-v" class="nav-link">V. Strategic Roadmap</a>
                 <a href="#section-vi" class="nav-link">VI. Conclusion</a>
+                <a href="AI White Paper.html" class="gemini-button ml-2 my-1">View Full White Paper</a>
             </div>
         </div>
     </nav>
@@ -849,4 +850,9 @@
                         takeawaysContentDiv.innerHTML = `<p class="text-red-500">An error occurred while generating takeaways: ${error.message}. Please check the console for more details.</p>`;
                     } finally {
                         generateTakeawaysButton.disabled = false;
-                        generateTakeawaysButton.classL
+                        generateTakeawaysButton.innerHTML = '<i class="fas fa-lightbulb mr-2"></i>✨ Generate Key Takeaways';
+                    } // Closes finally
+                } // Closes async arrow function
+            ); // Closes addEventListener
+        } // Closes if (generateTakeawaysButton)
+    }); // Closes DOMContentLoaded listener
