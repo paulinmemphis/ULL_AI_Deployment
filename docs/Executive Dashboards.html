@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UL Lafayette - Executive Dashboard Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Visualization & Content Choices:
+        - President's Dashboard:
+            - KPIs (Overall Financial Health, Enrollment, Retention, Graduation, Research, Fundraising): Goal: Inform (Status). Method: HTML/Tailwind cards with dynamic text. Interaction: Click some KPIs for drill-down charts. Justification: Quick overview of university-wide health.
+            - Enrollment Trend Chart: Goal: Show Change. Method: Chart.js Line Chart. Interaction: Tooltips. Justification: Visualizes key enrollment patterns.
+            - Research Funding Sources Chart: Goal: Show Proportion. Method: Chart.js Doughnut Chart. Interaction: Tooltips. Justification: Illustrates revenue diversification in research.
+        - CFO's Dashboard:
+            - KPIs (Operating Margin, Liquidity, Tuition Dependency, Budget Variance): Goal: Inform (Financial Status). Method: HTML/Tailwind cards. Interaction: Click for drill-down charts. Justification: Critical financial health indicators.
+            - Revenue/Expense Trend Chart: Goal: Show Change/Compare. Method: Chart.js Bar Chart. Interaction: Tooltips. Justification: Tracks core financial flows.
+            - Budget vs. Actual by Division Chart: Goal: Compare/Identify Variance. Method: Chart.js Grouped Bar Chart. Interaction: Tooltips. Justification: Highlights budget performance.
+        - Provost's Dashboard:
+            - KPIs (Retention by College, Graduation by Program, Course Completion, Student-Faculty Ratio): Goal: Inform (Academic Performance). Method: HTML/Tailwind cards, some with embedded mini-charts. Interaction: Click for detailed views. Justification: Key academic success metrics.
+            - Retention by Demographic Chart: Goal: Compare/Identify Gaps. Method: Chart.js Bar Chart. Interaction: Tooltips. Justification: Focuses on equity in student success.
+            - Gateway Course Success Chart: Goal: Identify Challenges. Method: Chart.js Bar Chart. Interaction: Tooltips. Justification: Highlights critical academic progression points.
+        - All textual content provides context for each dashboard and its KPIs, drawing from the themes in the source reports. Drill-downs reveal more granular charts or data tables.
+    -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F9FAFB; }
+        .ul-red { color: #C8102E; }
+        .bg-ul-red { background-color: #C8102E; }
+        .border-ul-red { border-color: #C8102E; }
+        .hover-bg-ul-red-darker:hover { background-color: #A00D23; }
+
+        .nav-tab { padding: 0.75rem 1.5rem; font-weight: 500; color: #6B7280; border-bottom: 3px solid transparent; transition: all 0.3s ease; }
+        .nav-tab:hover { color: #C8102E; }
+        .nav-tab.active { color: #C8102E; border-bottom-color: #C8102E; font-weight: 600; }
+
+        .kpi-card { background-color: #FFFFFF; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); padding: 1.5rem; transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+        .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+        .kpi-title { font-size: 0.875rem; color: #6B7280; margin-bottom: 0.25rem; }
+        .kpi-value { font-size: 1.875rem; font-weight: 700; color: #1F2937; }
+        .kpi-trend { font-size: 0.875rem; margin-left: 0.5rem; }
+        .kpi-trend .fa-arrow-up { color: #10B981; }
+        .kpi-trend .fa-arrow-down { color: #EF4444; }
+        .kpi-trend .fa-minus { color: #6B7280; }
+        .kpi-card.clickable { cursor: pointer; }
+
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 350px; padding: 1rem; background-color: #FFFFFF; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
+        @media (min-width: 768px) { .chart-container { height: 350px; max-height: 400px;} }
+        
+        .dashboard-section { display: none; animation: fadeIn 0.5s ease-in-out; }
+        .dashboard-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .filter-bar { margin-bottom: 1.5rem; background-color: #FFFFFF; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .filter-bar label { margin-right: 0.5rem; font-weight: 500; color: #374151;}
+        .filter-bar select { padding: 0.5rem 0.75rem; border-radius: 0.375rem; border: 1px solid #D1D5DB; background-color: #F9FAFB; color: #374151; }
+        
+        .drilldown-content { margin-top: 1.5rem; padding: 1.5rem; background-color: #f0f4f8; border-radius: 0.75rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 100; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { background-color: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); width: 90%; max-width: 700px; max-height: 80vh; overflow-y: auto; }
+        .modal-close-btn { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6B7280; }
+    </style>
+</head>
+<body>
+    <header class="bg-ul-red text-white py-6 shadow-md">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-3xl font-bold">University of Louisiana at Lafayette</h1>
+            <p class="text-xl font-semibold">Executive Dashboard Suite</p>
+        </div>
+    </header>
+
+    <nav class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="container mx-auto flex justify-center items-center">
+            <button class="nav-tab active" data-dashboard="president">President's Cockpit</button>
+            <button class="nav-tab" data-dashboard="cfo">CFO's Command Center</button>
+            <button class="nav-tab" data-dashboard="provost">Provost's Academic Compass</button>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 md:p-6 lg:p-8">
+        <section id="presidentDashboard" class="dashboard-section active">
+            <h2 class="text-2xl font-bold ul-red mb-1 text-center">President's Strategic Cockpit</h2>
+            <p class="text-center text-gray-600 mb-6">A holistic, at-a-glance view of the university's overall health, progress against strategic plan priorities, and key risk indicators. This dashboard synthesizes top-level metrics from across the institution to support strategic oversight and governance. Click on KPIs for conceptual drill-downs.</p>
+            
+            <div class="filter-bar flex flex-wrap items-center gap-4">
+                <div>
+                    <label for="presidentYearFilter">Fiscal Year:</label>
+                    <select id="presidentYearFilter" name="year">
+                        <option value="2024">FY 2024</option>
+                        <option value="2023">FY 2023</option>
+                        <option value="2022">FY 2022</option>
+                    </select>
+                </div>
+                <p class="text-sm text-gray-500 italic">(Filters are illustrative for conceptual dashboards)</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div class="kpi-card clickable" data-drilldown="financialHealthDetail">
+                    <div class="flex justify-between items-center">
+                        <h3 class="kpi-title">Overall Financial Health</h3>
+                        <i class="fas fa-shield-alt ul-red"></i>
+                    </div>
+                    <p class="kpi-value">Stable</p>
+                    <p class="text-sm text-gray-500">Composite Index: 78/100</p>
+                </div>
+                <div class="kpi-card clickable" data-drilldown="enrollmentDetail">
+                    <div class="flex justify-between items-center">
+                        <h3 class="kpi-title">Total Enrollment (FTE)</h3>
+                        <i class="fas fa-users ul-red"></i>
+                    </div>
+                    <p class="kpi-value">16,450 <span class="kpi-trend"><i class="fas fa-arrow-up"></i> 2.1%</span></p>
+                    <p class="text-sm text-gray-500">vs. Prior Year</p>
+                </div>
+                <div class="kpi-card clickable" data-drilldown="retentionDetailPresident">
+                     <div class="flex justify-between items-center">
+                        <h3 class="kpi-title">First-Year Retention</h3>
+                        <i class="fas fa-user-check ul-red"></i>
+                    </div>
+                    <p class="kpi-value">78.5% <span class="kpi-trend"><i class="fas fa-arrow-up"></i> 0.5%</span></p>
+                    <p class="text-sm text-gray-500">Fall to Fall</p>
+                </div>
+                <div class="kpi-card">
+                     <div class="flex justify-between items-center">
+                        <h3 class="kpi-title">6-Year Graduation Rate</h3>
+                        <i class="fas fa-graduation-cap ul-red"></i>
+                    </div>
+                    <p class="kpi-value">64.2% <span class="kpi-trend"><i class="fas fa-arrow-down"></i> 0.3%</span></p>
+                    <p class="text-sm text-gray-500">Latest Cohort</p>
+                </div>
+                <div class="kpi-card clickable" data-drilldown="researchDetailPresident">
+                     <div class="flex justify-between items-center">
+                        <h3 class="kpi-title">Research Expenditures</h3>
+                        <i class="fas fa-flask ul-red"></i>
+                    </div>
+                    <p class="kpi-value">$45.2M <span class="kpi-trend"><i class="fas fa-arrow-up"></i> 5.8%</span></p>
+                    <p class="text-sm text-gray-500">Annualized</p>
+                </div>
+                <div class="kpi-card">
+                     <div class="flex justify-between items-center">
+                        <h3 class="kpi-title">Alumni Giving Rate</h3>
+                        <i class="fas fa-hand-holding-heart ul-red"></i>
+                    </div>
+                    <p class="kpi-value">5.8% <span class="kpi-trend"><i class="fas fa-minus"></i></span></p>
+                    <p class="text-sm text-gray-500">Annual Participation</p>
+                </div>
+            </div>
+
+            <div id="financialHealthDetail" class="drilldown-content hidden">
+                <h4 class="text-lg font-semibold ul-red mb-2">Financial Health Detail (Conceptual)</h4>
+                <p class="text-gray-600">This section would typically show key financial ratios like Operating Margin (e.g., 1.5%), Primary Reserve Ratio (e.g., 0.45 months), and Tuition Dependency (e.g., 65%). A link to the CFO's Dashboard would provide deeper financial analysis.</p>
+                <div class="chart-container mt-4" style="max-width: 400px; height: 250px;">
+                    <canvas id="presidentFinancialRatiosChart"></canvas>
+                </div>
+            </div>
+            <div id="enrollmentDetail" class="drilldown-content hidden">
+                <h4 class="text-lg font-semibold ul-red mb-2">Enrollment Trend Detail</h4>
+                <div class="chart-container">
+                    <canvas id="presidentEnrollmentChart"></canvas>
+                </div>
+            </div>
+             <div id="retentionDetailPresident" class="drilldown-content hidden">
+                <h4 class="text-lg font-semibold ul-red mb-2">First-Year Retention Detail</h4>
+                <p class="text-gray-600 mb-2">Breakdown of retention rates by key demographic groups. Data is illustrative.</p>
+                <div class="chart-container">
+                    <canvas id="presidentRetentionBreakdownChart"></canvas>
+                </div>
+            </div>
+            <div id="researchDetailPresident" class="drilldown-content hidden">
+                <h4 class="text-lg font-semibold ul-red mb-2">Research Funding Sources</h4>
+                 <p class="text-gray-600 mb-2">Distribution of research funding by source. Data is illustrative.</p>
+                <div class="chart-container" style="max-width: 400px; height: 300px;">
+                    <canvas id="presidentResearchFundingChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="cfoDashboard" class="dashboard-section">
+            <h2 class="text-2xl font-bold ul-red mb-1 text-center">CFO's Financial Command Center</h2>
+            <p class="text-center text-gray-600 mb-6">Real-time financial performance, liquidity management, budget adherence, and long-term fiscal sustainability indicators. This dashboard is designed to provide the CFO with critical financial insights for strategic resource allocation and risk management. Click on KPIs for conceptual drill-downs.</p>
+            
+            <div class="filter-bar flex flex-wrap items-center gap-4">
+                <div>
+                    <label for="cfoYearFilter">Fiscal Year:</label>
+                    <select id="cfoYearFilter" name="year">
+                        <option value="2024">FY 2024</option>
+                        <option value="2023">FY 2023</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="cfoDivisionFilter">Division:</label>
+                    <select id="cfoDivisionFilter" name="division">
+                        <option value="all">All Divisions</option>
+                        <option value="academic_affairs">Academic Affairs</option>
+                        <option value="student_affairs">Student Affairs</option>
+                        <option value="admin_finance">Administration & Finance</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="kpi-card clickable" data-drilldown="operatingMarginDetail">
+                    <h3 class="kpi-title">Operating Margin</h3>
+                    <p class="kpi-value">1.5% <span class="kpi-trend"><i class="fas fa-arrow-up"></i> 0.2%</span></p>
+                </div>
+                <div class="kpi-card">
+                    <h3 class="kpi-title">Current Ratio</h3>
+                    <p class="kpi-value">2.1 <span class="kpi-trend"><i class="fas fa-minus"></i></span></p>
+                </div>
+                <div class="kpi-card">
+                    <h3 class="kpi-title">Tuition Dependency</h3>
+                    <p class="kpi-value">65% <span class="kpi-trend"><i class="fas fa-arrow-down"></i> 1.0%</span></p>
+                </div>
+                <div class="kpi-card clickable" data-drilldown="budgetVarianceDetail">
+                    <h3 class="kpi-title">Budget vs. Actual (Overall)</h3>
+                    <p class="kpi-value">-2.5% <span class="text-sm text-red-500">(Under Budget)</span></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="chart-container">
+                    <canvas id="cfoRevenueExpenseChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="cfoBudgetActualChart"></canvas>
+                </div>
+            </div>
+            
+            <div id="operatingMarginDetail" class="drilldown-content hidden">
+                <h4 class="text-lg font-semibold ul-red mb-2">Operating Margin Components (FY2024 - Illustrative)</h4>
+                <ul class="list-disc list-inside text-gray-600">
+                    <li>Total Operating Revenue: $250.0M</li>
+                    <li>  Net Tuition & Fees: $162.5M (65%)</li>
+                    <li>  Grants & Contracts: $45.0M (18%)</li>
+                    <li>  State Appropriations: $25.0M (10%)</li>
+                    <li>  Auxiliary Enterprises: $12.5M (5%)</li>
+                    <li>  Other Revenue: $5.0M (2%)</li>
+                    <li>Total Operating Expenses: $246.25M</li>
+                    <li>  Salaries & Wages: $123.1M (50%)</li>
+                    <li>  Benefits: $49.25M (20%)</li>
+                    <li>  Supplies & Services: $36.9M (15%)</li>
+                    <li>  Depreciation: $24.6M (10%)</li>
+                    <li>  Other Expenses: $12.3M (5%)</li>
+                    <li>Operating Surplus: $3.75M (1.5% Margin)</li>
+                </ul>
+            </div>
+            <div id="budgetVarianceDetail" class="drilldown-content hidden">
+                <h4 class="text-lg font-semibold ul-red mb-2">Budget vs. Actual Variance by Top-Level Division (Illustrative)</h4>
+                <ul class="list-disc list-inside text-gray-600">
+                    <li>Academic Affairs: -1.5% (Favorable)</li>
+                    <li>Student Affairs: +0.5% (Unfavorable)</li>
+                    <li>Administration & Finance: -3.0% (Favorable)</li>
+                    <li>Research Division: -1.0% (Favorable)</li>
+                    <li>Athletics: +1.2% (Unfavorable)</li>
+                </ul>
+                <p class="text-sm text-gray-500 mt-2">Further drill-down to departmental level would be available.</p>
+            </div>
+        </section>
+
+        <section id="provostDashboard" class="dashboard-section">
+            <h2 class="text-2xl font-bold ul-red mb-1 text-center">Provost's Academic Compass</h2>
+            <p class="text-center text-gray-600 mb-6">Insights into student academic progress, learning outcomes, retention, graduation, and academic program performance. This dashboard supports academic leadership in enhancing educational quality and student success. Click on KPIs for conceptual drill-downs.</p>
+
+            <div class="filter-bar flex flex-wrap items-center gap-4">
+                <div>
+                    <label for="provostTermFilter">Academic Term:</label>
+                    <select id="provostTermFilter" name="term">
+                        <option value="Fall2023">Fall 2023</option>
+                        <option value="Spring2024">Spring 2024</option>
+                        <option value="AY2023_24">AY 2023-24</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="provostCollegeFilter">College:</label>
+                    <select id="provostCollegeFilter" name="college">
+                        <option value="all">All Colleges</option>
+                        <option value="engineering">College of Engineering</option>
+                        <option value="arts">College of the Arts</option>
+                        <option value="sciences">College of Sciences</option>
+                        <option value="business">B.I. Moody III College of Business</option>
+                        <option value="education">College of Education & Human Development</option>
+                        <option value="liberal_arts">College of Liberal Arts</option>
+                        <option value="nursing">College of Nursing & Health Sciences</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="kpi-card clickable" data-drilldown="retentionByCollegeDetail">
+                    <h3 class="kpi-title">1st Yr Retention by College</h3>
+                    <p class="kpi-value">See Chart <i class="fas fa-chart-bar ml-1"></i></p>
+                </div>
+                <div class="kpi-card">
+                    <h3 class="kpi-title">Graduation Rate (6-Yr)</h3>
+                    <p class="kpi-value">64.2% <span class="kpi-trend"><i class="fas fa-arrow-down"></i></span></p>
+                </div>
+                <div class="kpi-card clickable" data-drilldown="courseCompletionDetail">
+                    <h3 class="kpi-title">Course Completion (C or better)</h3>
+                    <p class="kpi-value">88% <span class="kpi-trend"><i class="fas fa-arrow-up"></i></span></p>
+                </div>
+                <div class="kpi-card">
+                    <h3 class="kpi-title">Student-Faculty Ratio</h3>
+                    <p class="kpi-value">18:1 <span class="kpi-trend"><i class="fas fa-minus"></i></span></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="chart-container">
+                    <canvas id="provostRetentionDemographicsChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="provostGatewayCoursesChart"></canvas>
+                </div>
+            </div>
+            
+            <div id="retentionByCollegeDetail" class="drilldown-content hidden">
+                <h4 class="text-lg font-semibold ul-red mb-2">First-Year Retention Rates by College (Illustrative)</h4>
+                <div class="chart-container" style="height: 350px;">
+                     <canvas id="provostRetentionByCollegeChart"></canvas>
+                </div>
+            </div>
+            <div id="courseCompletionDetail" class="drilldown-content hidden">
+                <h4 class="text-lg font-semibold ul-red mb-2">Course Completion Rates - Top 5 & Bottom 5 Courses (Illustrative)</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h5 class="font-medium text-gray-700">Top 5 Courses (Completion Rate)</h5>
+                        <ul class="list-disc list-inside text-gray-600 text-sm">
+                            <li>ARTS 101: 95%</li>
+                            <li>HIST 200: 94%</li>
+                            <li>PSYC 110: 93%</li>
+                            <li>SOCI 100: 92.5%</li>
+                            <li>MUS 105: 92%</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-medium text-gray-700">Bottom 5 Courses (Completion Rate)</h5>
+                        <ul class="list-disc list-inside text-gray-600 text-sm">
+                            <li>CHEM 107: 68%</li>
+                            <li>MATH 109: 70%</li>
+                            <li>PHYS 201: 72%</li>
+                            <li>ACCT 201: 75%</li>
+                            <li>CMCN 100: 78%</li>
+                        </ul>
+                    </div>
+                </div>
+                 <p class="text-xs text-gray-500 mt-2">Data is illustrative. Further drill-down to section level or instructor level would be available.</p>
+            </div>
+        </section>
+    </main>
+
+    <div id="drilldownModal" class="modal-overlay">
+        <div class="modal-content relative">
+            <button id="modalCloseButton" class="modal-close-btn"><i class="fas fa-times"></i></button>
+            <h3 id="modalTitle" class="text-xl font-bold ul-red mb-4">Detail View</h3>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-white text-center p-6 mt-12">
+        <p>&copy; UL Lafayette Executive Dashboards | Illustrative Examples</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabs = document.querySelectorAll('.nav-tab');
+            const dashboards = document.querySelectorAll('.dashboard-section');
+            const kpiCardsClickable = document.querySelectorAll('.kpi-card.clickable');
+            const drilldownModal = document.getElementById('drilldownModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            const modalCloseButton = document.getElementById('modalCloseButton');
+
+            // Tab Navigation
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function () {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const targetDashboardId = this.dataset.dashboard + 'Dashboard';
+                    dashboards.forEach(dash => {
+                        if (dash.id === targetDashboardId) {
+                            dash.classList.add('active');
+                        } else {
+                            dash.classList.remove('active');
+                        }
+                    });
+                });
+            });
+            
+            // Modal Handling
+            function openModal(title, contentElementId) {
+                const contentSource = document.getElementById(contentElementId);
+                if (contentSource) {
+                    modalTitle.textContent = title;
+                    modalBody.innerHTML = ''; // Clear previous content
+                    // Clone the content to avoid moving it from the DOM, allows re-opening
+                    const clonedContent = contentSource.cloneNode(true);
+                    clonedContent.classList.remove('hidden'); // Ensure it's visible if it was a hidden drilldown
+                    modalBody.appendChild(clonedContent);
+                    drilldownModal.classList.add('active');
+                } else {
+                    console.error("Drilldown content element not found:", contentElementId);
+                    modalTitle.textContent = "Error";
+                    modalBody.innerHTML = "<p>Content not found.</p>";
+                    drilldownModal.classList.add('active');
+                }
+            }
+
+            function closeModal() {
+                drilldownModal.classList.remove('active');
+                modalBody.innerHTML = ''; // Clear content on close
+            }
+
+            kpiCardsClickable.forEach(card => {
+                card.addEventListener('click', function() {
+                    const drilldownTargetId = this.dataset.drilldown;
+                    const cardTitle = this.querySelector('.kpi-title').textContent;
+                    openModal(cardTitle + " - Details", drilldownTargetId);
+                });
+            });
+            
+            if(modalCloseButton) modalCloseButton.addEventListener('click', closeModal);
+            if(drilldownModal) drilldownModal.addEventListener('click', function(event) {
+                if (event.target === drilldownModal) { // Click on overlay background
+                    closeModal();
+                }
+            });
+
+            // Chart.js Configurations
+            const commonChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 15, padding: 10 } },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleFont: { weight: 'bold' },
+                        bodyFont: { size: 12 },
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { font: { size: 10 } } },
+                    x: { ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0 } }
+                }
+            };
+
+            // --- President's Dashboard Charts ---
+            const presidentEnrollmentCtx = document.getElementById('presidentEnrollmentChart')?.getContext('2d');
+            if (presidentEnrollmentCtx) {
+                new Chart(presidentEnrollmentCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['FY19', 'FY20', 'FY21', 'FY22', 'FY23', 'FY24'],
+                        datasets: [{
+                            label: 'Total FTE Enrollment',
+                            data: [15800, 16100, 16050, 16200, 16350, 16450],
+                            borderColor: '#C8102E',
+                            backgroundColor: 'rgba(200, 16, 46, 0.1)',
+                            fill: true,
+                            tension: 0.1
+                        }]
+                    },
+                    options: commonChartOptions
+                });
+            }
+            
+            const presidentFinancialRatiosCtx = document.getElementById('presidentFinancialRatiosChart')?.getContext('2d');
+            if (presidentFinancialRatiosCtx) {
+                new Chart(presidentFinancialRatiosCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Operating Margin', 'Primary Reserve Ratio', 'Tuition Dependency'],
+                        datasets: [{
+                            label: 'Financial Ratios (%)',
+                            data: [1.5, 15, 65], // Example: 1.5% margin, 0.4 months (scaled for % chart), 65% dependency
+                            backgroundColor: ['rgba(200, 16, 46, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(255, 159, 64, 0.7)'],
+                        }]
+                    },
+                    options: {...commonChartOptions, indexAxis: 'y', scales: { y: { ticks: { font: { size: 10 }}}, x: { ticks: { callback: function(value) { return value + "%" } }} }}
+                });
+            }
+
+            const presidentRetentionBreakdownCtx = document.getElementById('presidentRetentionBreakdownChart')?.getContext('2d');
+            if (presidentRetentionBreakdownCtx) {
+                new Chart(presidentRetentionBreakdownCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Overall', 'Pell Grant', 'URM', 'First-Gen'],
+                        datasets: [{
+                            label: 'First-Year Retention Rate',
+                            data: [78.5, 75.0, 76.2, 77.1],
+                            backgroundColor: 'rgba(200, 16, 46, 0.7)',
+                            borderColor: '#C8102E',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {...commonChartOptions, scales: { y: { suggestedMin: 60, suggestedMax: 90, ticks: { callback: function(value) { return value + "%" }} }}}
+                });
+            }
+            
+            const presidentResearchFundingCtx = document.getElementById('presidentResearchFundingChart')?.getContext('2d');
+            if (presidentResearchFundingCtx) {
+                new Chart(presidentResearchFundingCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Federal', 'State', 'Industry', 'Institutional', 'Other'],
+                        datasets: [{
+                            label: 'Research Funding Sources',
+                            data: [25.0, 5.2, 8.5, 4.0, 2.5], // in Millions
+                            backgroundColor: ['#C8102E', '#8C182E', '#FDB913', '#00A3E0', '#6B7280'],
+                        }]
+                    },
+                    options: {...commonChartOptions, plugins: { legend: { position: 'right'}}}
+                });
+            }
+
+
+            // --- CFO's Dashboard Charts ---
+            const cfoRevenueExpenseCtx = document.getElementById('cfoRevenueExpenseChart')?.getContext('2d');
+            if (cfoRevenueExpenseCtx) {
+                new Chart(cfoRevenueExpenseCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['FY21', 'FY22', 'FY23', 'FY24'],
+                        datasets: [
+                            { label: 'Total Operating Revenue (M)', data: [230, 240, 245, 250], backgroundColor: 'rgba(75, 192, 192, 0.7)', borderColor: 'rgba(75, 192, 192, 1)', borderWidth: 1},
+                            { label: 'Total Operating Expenses (M)', data: [228, 235, 242, 246.25], backgroundColor: 'rgba(255, 99, 132, 0.7)', borderColor: 'rgba(255, 99, 132, 1)', borderWidth: 1}
+                        ]
+                    },
+                    options: commonChartOptions
+                });
+            }
+
+            const cfoBudgetActualCtx = document.getElementById('cfoBudgetActualChart')?.getContext('2d');
+            if (cfoBudgetActualCtx) {
+                new Chart(cfoBudgetActualCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Academic Affairs', 'Student Affairs', 'Admin & Finance', 'Research'],
+                        datasets: [
+                            { label: 'Budget (M)', data: [120, 30, 50, 40], backgroundColor: 'rgba(54, 162, 235, 0.5)' },
+                            { label: 'Actual (M)', data: [118.2, 30.15, 48.5, 39.6], backgroundColor: 'rgba(200, 16, 46, 0.7)' }
+                        ]
+                    },
+                    options: commonChartOptions
+                });
+            }
+            
+            // --- Provost's Dashboard Charts ---
+            const provostRetentionDemographicsCtx = document.getElementById('provostRetentionDemographicsChart')?.getContext('2d');
+            if (provostRetentionDemographicsCtx) {
+                new Chart(provostRetentionDemographicsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Overall', 'Pell', 'URM', 'First-Gen', 'Online'],
+                        datasets: [{
+                            label: '1st Year Retention Rate (%)',
+                            data: [78.5, 75.0, 76.2, 77.1, 72.5],
+                            backgroundColor: 'rgba(200, 16, 46, 0.7)',
+                            borderColor: '#C8102E',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {...commonChartOptions, indexAxis: 'y', scales: { y: { ticks: { font: { size: 10 }}}, x: { suggestedMin:60, suggestedMax:90, ticks: { callback: function(value) { return value + "%" }} }}}
+                });
+            }
+
+            const provostGatewayCoursesCtx = document.getElementById('provostGatewayCoursesChart')?.getContext('2d');
+            if (provostGatewayCoursesCtx) {
+                new Chart(provostGatewayCoursesCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['MATH 109', 'CHEM 107', 'ENGL 101', 'BIOL 110', 'PSYC 110'],
+                        datasets: [{
+                            label: 'Success Rate (C or Better)',
+                            data: [70, 68, 85, 75, 93],
+                            backgroundColor: ['#EF4444', '#F87171', '#34D399', '#FBBF24', '#60A5FA'],
+                        }]
+                    },
+                     options: {...commonChartOptions, scales: { y: { suggestedMin:50, suggestedMax:100, ticks: { callback: function(value) { return value + "%" }} }}}
+                });
+            }
+            
+            const provostRetentionByCollegeCtx = document.getElementById('provostRetentionByCollegeChart')?.getContext('2d');
+            if (provostRetentionByCollegeCtx) {
+                new Chart(provostRetentionByCollegeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Engineering', 'Arts', 'Sciences', 'Business', 'Education', 'Liberal Arts', 'Nursing'],
+                        datasets: [{
+                            label: '1st Year Retention Rate (%)',
+                            data: [82, 79, 77, 80, 76, 75, 83],
+                            backgroundColor: 'rgba(140, 24, 46, 0.7)', // Darker UL Red
+                            borderColor: '#8C182E',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {...commonChartOptions, indexAxis: 'x', scales: { y: { suggestedMin:65, suggestedMax:90, ticks: { callback: function(value) { return value + "%" }} }}}
+                });
+            }
+
+        });
+    </script>
+</body>
+</html>
