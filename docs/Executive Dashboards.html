@@ -11,9 +11,9 @@
 
     <!-- Visualization & Content Choices:
         - President's Dashboard:
-            - KPIs (Overall Financial Health based on Change in Net Position, Enrollment (Illustrative), Retention (Illustrative), Graduation (Illustrative), Research Expenditures, Fundraising (Illustrative)): Goal: Inform (Status). Method: HTML/Tailwind cards with dynamic text. Interaction: Click some KPIs for drill-down charts. Justification: Quick overview of university-wide health.
+            - KPIs (Overall Financial Health based on Change in Net Position, Enrollment (Illustrative), Retention (Illustrative), Graduation (Illustrative), Grant & Contract Revenue (FY23), Fundraising (Illustrative)): Goal: Inform (Status). Method: HTML/Tailwind cards with dynamic text. Interaction: Click some KPIs for drill-down charts. Justification: Quick overview of university-wide health.
             - Enrollment Trend Chart: Goal: Show Change. Method: Chart.js Line Chart (Illustrative). Interaction: Tooltips. Justification: Visualizes key enrollment patterns.
-            - Research Funding Sources Chart (FY23 Data): Goal: Show Proportion. Method: Chart.js Doughnut Chart. Interaction: Tooltips. Justification: Illustrates revenue diversification in research.
+            - Research Grant Funding Sources Chart (FY23 Data): Goal: Show Proportion. Method: Chart.js Doughnut Chart. Interaction: Tooltips. Justification: Illustrates revenue diversification in research grants.
         - CFO's Dashboard:
             - KPIs (Operating Margin (FY23), Current Ratio (FY23), Tuition Dependency (FY23), Budget Variance (Illustrative)): Goal: Inform (Financial Status). Method: HTML/Tailwind cards. Interaction: Click for drill-down charts. Justification: Critical financial health indicators.
             - Revenue/Expense Trend Chart (FY23 Data for current year): Goal: Show Change/Compare. Method: Chart.js Bar Chart. Interaction: Tooltips. Justification: Tracks core financial flows.
@@ -131,13 +131,13 @@
                     <p class="kpi-value">64.2%*</p>
                     <p class="kpi-subtext">*Illustrative / Benchmark</p>
                 </div>
-                <div class="kpi-card clickable" data-drilldown="researchDetailPresident">
+                <div class="kpi-card clickable" data-drilldown="grantContractRevenueDetailPresident">
                      <div class="flex justify-between items-center">
-                        <h3 class="kpi-title">Research Expenditures</h3>
-                        <i class="fas fa-flask ul-red"></i>
+                        <h3 class="kpi-title">Grant & Contract Revenue (FY23)</h3>
+                        <i class="fas fa-file-invoice-dollar ul-red"></i>
                     </div>
-                    <p class="kpi-value">$76.9M</p>
-                     <p class="kpi-subtext">FY23 Operating Expense</p>
+                    <p class="kpi-value">$109.1M</p>
+                     <p class="kpi-subtext">FY23 Operating Revenue</p>
                 </div>
                 <div class="kpi-card">
                      <div class="flex justify-between items-center">
@@ -172,10 +172,10 @@
                     <canvas id="presidentEnrollmentChart"></canvas>
                 </div>
             </div>
-            <div id="researchDetailPresident" class="drilldown-content hidden">
-                <h4 class="text-lg font-semibold ul-red mb-2">Research Grant Funding Sources (FY23 Operating Revenues)</h4>
+            <div id="grantContractRevenueDetailPresident" class="drilldown-content hidden">
+                <h4 class="text-lg font-semibold ul-red mb-2">Grant & Contract Revenue Sources (FY23 Operating Revenues)</h4>
                 <div class="chart-container" style="max-width: 400px; height: 300px;">
-                    <canvas id="presidentResearchFundingChart"></canvas>
+                    <canvas id="presidentGrantContractRevenueChart"></canvas>
                 </div>
             </div>
         </section>
@@ -485,14 +485,14 @@
                 });
             };
 
-            window.dashboardChartInitializers['presidentResearchFundingChart'] = function(ctx) {
+            window.dashboardChartInitializers['presidentGrantContractRevenueChart'] = function(ctx) { // Renamed from presidentResearchFundingChart
                 if (!ctx) return;
                 new Chart(ctx, {
                     type: 'doughnut',
                     data: {
                         labels: ['Federal Grants', 'State/Local Grants', 'Nongov. Grants'],
                         datasets: [{
-                            label: 'FY23 Research Grant Sources (Op Rev)',
+                            label: 'FY23 Grant & Contract Revenue Sources',
                             data: [49503564, 12873620, 47682395], // From AFR Pg 3 (Op Rev)
                             backgroundColor: ['#C8102E', '#FDB913', '#00A3E0'],
                         }]
